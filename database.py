@@ -42,6 +42,7 @@ from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from pymongo.errors import ConnectionFailure
 from config import get_settings
 import logging
+import certifi
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,9 @@ async def connect_to_mongo() -> None:
         logger.info("Connecting to MongoDB Atlas...")
         _client = AsyncIOMotorClient(
             settings.mongodb_uri,
-            serverSelectionTimeoutMS=5000
+            serverSelectionTimeoutMS=5000,
+            tlsCAFile=certifi.where(),  # Use certifi for SSL certificates
+            tls=True  # Explicitly enable TLS
         )
         
         # Verify connection
