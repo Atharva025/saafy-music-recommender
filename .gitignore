@@ -48,6 +48,10 @@ logs/
 
 # Testing
 .pytest_cache/
+
+# Vercel
+.vercel
+.vercel/
 .coverage
 htmlcov/
 
