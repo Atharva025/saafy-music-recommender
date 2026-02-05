@@ -49,9 +49,13 @@ logs/
 # Testing
 .pytest_cache/
 
-# Vercel
+# Docker
+.dockerignore
+
+# Deployment
 .vercel
 .vercel/
+render.yaml
 .coverage
 htmlcov/
 
