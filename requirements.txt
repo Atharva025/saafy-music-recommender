@@ -1,0 +1,21 @@
+# Core Web Framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+
+# Database
+motor>=3.3.2
+pymongo>=4.6.1
+
+# ML & NLP (flexible versions for Python 3.13 compatibility)
+sentence-transformers>=2.3.1
+torch>=2.0.0
+transformers>=4.35.0
+
+# Utilities
+python-dotenv>=1.0.0
+requests>=2.31.0
+numpy>=1.24.0
+
+# Data Validation
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
