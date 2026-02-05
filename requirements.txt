@@ -6,15 +6,18 @@ uvicorn[standard]>=0.27.0
 motor>=3.3.2
 pymongo>=4.6.1
 
-# ML & NLP (flexible versions for Python 3.13 compatibility)
-sentence-transformers>=2.3.1
+# ML & NLP - CPU ONLY (no CUDA dependencies - saves 1GB+)
+# Install PyTorch CPU version first
+--extra-index-url https://download.pytorch.org/whl/cpu
 torch>=2.0.0
 transformers>=4.35.0
+sentence-transformers>=2.3.1
 
 # Utilities
 python-dotenv>=1.0.0
 requests>=2.31.0
 numpy>=1.24.0
+tqdm>=4.66.0
 
 # Data Validation
 pydantic>=2.5.0
