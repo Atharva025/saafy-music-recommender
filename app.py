@@ -345,6 +345,94 @@ async def api_search(query: str, limit: int = 10):
         logger.error(f"Search error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/add-song")
+async def api_add_song_by_name(song_name: str, artist: str = None):
+    """
+    REST API: Search for a song by name and add it to database immediately
+    
+    Example: POST /api/add-song?song_name=starboy&artist=weeknd
+    """
+    try:
+        await initialize_app()
+        
+        # Search for the song
+        search_query = f"{song_name} {artist}" if artist else song_name
+        params = {"query": search_query, "page": 0, "limit": 5}
+        data = fetch_from_saafy("/search/songs", params)
+        
+        if not data.get("success"):
+            raise HTTPException(status_code=500, detail=data.get('message', 'Search failed'))
+        
+        results = data.get("data", {}).get("results", [])
+        
+        if not results:
+            raise HTTPException(status_code=404, detail=f"No songs found for '{search_query}'")
+        
+        # Take the first/best match
+        song = results[0]
+        
+        # Process and store with embedding immediately
+        await process_and_store_song(song)
+        
+        # Get artist name
+        artists = song.get("artists", {}).get("primary", [])
+        artist_name = artists[0].get("name") if artists else "Unknown Artist"
+        
+        return {
+            "success": True,
+            "message": f"Song added to database successfully",
+            "song_id": song.get("id"),
+            "name": song.get("name"),
+            "primary_artist": artist_name,
+            "album": song.get("album", {}).get("name"),
+            "language": song.get("language")
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Add song error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/process/{song_id}")
+async def api_process_song(song_id: str):
+    """
+    REST API: Process and add a specific song to database by song ID
+    
+    Example: POST /api/process/fW-Mxsnu
+    """
+    try:
+        await initialize_app()
+        
+        # Fetch song details from Saafy API
+        data = fetch_from_saafy(f"/songs/{song_id}", {})
+        
+        if not data.get("success"):
+            raise HTTPException(status_code=404, detail=f"Song not found in Saafy API: {song_id}")
+        
+        song_data = data.get("data", {}).get("song", [])
+        if not song_data:
+            raise HTTPException(status_code=404, detail="No song data returned")
+        
+        song = song_data[0] if isinstance(song_data, list) else song_data
+        
+        # Process and store with embedding
+        await process_and_store_song(song)
+        
+        return {
+            "success": True,
+            "message": f"Song '{song.get('name', song_id)}' processed and added to database",
+            "song_id": song_id,
+            "name": song.get("name"),
+            "primary_artist": song.get("primary_artists", song.get("artists", {})).get("primary", [{}])[0].get("name") if song.get("primary_artists") or song.get("artists") else None
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Process song error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/stats")
 async def api_stats():
     """
@@ -446,8 +534,10 @@ with gr.Blocks(title="🎵 Saafy Music Recommender", theme=gr.themes.Soft()) as 
     **Note:** First request may take 3-5 seconds while ML model loads. Background song processing happens automatically after search.
     
     **REST API Available:**
+    - `POST /api/add-song?song_name=starboy&artist=weeknd` - Add song by name (instant)
+    - `GET /api/search?query=starboy&limit=10` - Search multiple songs (background processing)
     - `GET /api/recommend/{song_id}?limit=10` - Get recommendations
-    - `GET /api/search?query=starboy&limit=10` - Search songs
+    - `POST /api/process/{song_id}` - Process specific song by ID
     - `GET /api/stats` - Database statistics
     """)
 
