@@ -1,0 +1,2 @@
+# Testing requirements (not needed for deployment)
+# Already covered by main requirements.txt

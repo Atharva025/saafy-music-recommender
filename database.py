@@ -43,6 +43,7 @@ from pymongo.errors import ConnectionFailure
 from config import get_settings
 import logging
 import certifi
+import ssl
 
 logger = logging.getLogger(__name__)
 
@@ -62,12 +63,51 @@ async def connect_to_mongo() -> None:
     
     try:
         logger.info("Connecting to MongoDB Atlas...")
-        _client = AsyncIOMotorClient(
-            settings.mongodb_uri,
-            serverSelectionTimeoutMS=5000,
-            tlsCAFile=certifi.where(),  # Use certifi for SSL certificates
-            tls=True  # Explicitly enable TLS
-        )
+        
+        # HF Spaces / Gradio compatible connection settings
+        connection_params = {
+            "serverSelectionTimeoutMS": 30000,
+            "connectTimeoutMS": 30000,
+            "socketTimeoutMS": 30000,
+            "maxPoolSize": 10,
+            "minPoolSize": 1,
+            "retryWrites": True,
+            # Try proper TLS first
+            "tls": True,
+            "tlsCAFile": certifi.where(),
+        }
+        
+        try:
+            logger.info("Attempting secure TLS connection with certifi CA bundle...")
+            _client = AsyncIOMotorClient(
+                settings.mongodb_uri,
+                **connection_params
+            )
+            # Test the connection
+            await _client.admin.command('ping')
+            logger.info("Secure TLS connection successful!")
+            
+        except Exception as e:
+            logger.warning(f"Secure TLS connection failed: {e}")
+            logger.info("Falling back to relaxed TLS validation...")
+            
+            # Fallback: Allow connection even with cert issues
+            connection_params = {
+                "serverSelectionTimeoutMS": 30000,
+                "connectTimeoutMS": 30000,
+                "socketTimeoutMS": 30000,
+                "maxPoolSize": 10,
+                "minPoolSize": 1,
+                "retryWrites": True,
+                "tls": True,
+                "tlsAllowInvalidCertificates": True,
+                "tlsAllowInvalidHostnames": True,
+            }
+            
+            _client = AsyncIOMotorClient(
+                settings.mongodb_uri,
+                **connection_params
+            )
         
         # Verify connection
         await _client.admin.command('ping')
